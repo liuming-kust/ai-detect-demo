@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI文本检测范式演示工具 v5.0 —— 22维特征 · 批判性实证研究配套</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="echarts.min.js">
+    </script>
+    <style>
+        :root {
+            --primary: #4a5568;
+            --accent: #667eea;
+            --accent2: #764ba2;
+            --bg: #f7f8fc;
+            --card-bg: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --text-muted: #a0aec0;
+            --border: #e2e8f0;
+            --danger: #fc8181;
+            --danger-bg: #fff5f5;
+            --warning: #ed8936;
+            --warning-bg: #fffaf0;
+            --success: #48bb78;
+            --success-bg: #f0fff4;
+            --info-bg: #ebf8ff;
+            --radius: 10px;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.10);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 24px;
+            font-size: 15px;
+        }
+
+        .container {
+            max-width: 1340px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 50%, #2d3748 100%);
+            color: #e2e8f0;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+            border-radius: var(--radius);
+            border: 1px solid #4a5568;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: #ffffff;
+        }
+
+        .header .subtitle {
+            font-size: 0.85em;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
+
+        .header .badge-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.72em;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            background: rgba(255, 255, 255, 0.12);
+            color: #cbd5e0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .badge.warn {
+            background: rgba(237, 137, 54, 0.2);
+            color: #fbd38d;
+            border-color: rgba(237, 137, 54, 0.3);
+        }
+
+        .disclaimer-banner {
+            background: var(--warning-bg);
+            border: 1px solid #fbd38d;
+            border-left: 4px solid var(--warning);
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            border-radius: var(--radius);
+            font-size: 0.82em;
+            color: #744210;
+            line-height: 1.6;
+        }
+
+        .disclaimer-banner strong {
+            color: #c05621;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 18px;
+            border: 1px solid var(--border);
+            transition: box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card h2 {
+            font-size: 1.05em;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text);
+        }
+
+        .card h2 .icon {
+            font-size: 1.1em;
+        }
+
+        .text-input-wrapper {
+            position: relative;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            transition: all 0.25s;
+            background: #fafbfc;
+        }
+
+        .text-input-wrapper.drag-over {
+            border-color: var(--accent);
+            background: #f0f4ff;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .text-input-wrapper.has-file {
+            border-color: var(--success);
+            background: #f0fff4;
+        }
+
+        .drag-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s;
+            background: rgba(240, 244, 255, 0.85);
+            border-radius: 6px;
+        }
+
+        .text-input-wrapper.drag-over .drag-overlay {
+            opacity: 1;
+        }
+
+        .drag-overlay-content {
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .drag-overlay-content .drag-icon {
+            font-size: 2.5em;
+            margin-bottom: 4px;
+        }
+
+        .drag-overlay-content .drag-text {
+            font-size: 0.95em;
+            font-weight: 700;
+        }
+
+        .drag-overlay-content .drag-sub {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .text-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            border-radius: 6px 6px 0 0;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .text-toolbar .toolbar-hint {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .text-toolbar .toolbar-hint span {
+            white-space: nowrap;
+        }
+
+        .upload-status-inline {
+            font-size: 0.78em;
+            min-height: 18px;
+            padding: 0 4px;
+        }
+
+        .upload-status-inline .success { color: #22543d; }
+        .upload-status-inline .error { color: #9b2c2c; }
+        .upload-status-inline .loading { color: #744210; }
+
+        .upload-file-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .upload-file-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 12px;
+            font-size: 0.7em;
+            color: #234e52;
+        }
+
+        .upload-file-tag .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            color: #9b2c2c;
+            font-size: 1.1em;
+            line-height: 1;
+        }
+
+        .upload-file-tag .remove-tag:hover { color: #c53030; }
+
+        #inputText {
+            width: 100%;
+            min-height: 240px;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 0 0 6px 6px;
+            font-size: 14px;
+            font-family: 'SF Mono', 'Consolas', 'Source Code Pro', 'Noto Sans SC', monospace;
+            line-height: 1.8;
+            resize: vertical;
+            transition: none;
+            background: transparent;
+            color: var(--text);
+            outline: none;
+        }
+
+        #inputText:focus { box-shadow: none; background: #fff; }
+
+        .char-count {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 20px;
+            border: none;
+            border-radius: 7px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.35);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover { background: #e2e8f0; }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+            border: 1.5px solid var(--accent);
+        }
+
+        .btn-outline:hover { background: rgba(102, 126, 234, 0.06); }
+
+        .btn-xs {
+            padding: 3px 10px;
+            font-size: 11px;
+            border-radius: 5px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .preset-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .preset-selector label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .preset-selector select {
+            padding: 7px 14px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border);
+            font-size: 13px;
+            background: #fff;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .preset-hint {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-left: auto;
+            font-style: italic;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+
+        .score-hero {
+            background: linear-gradient(135deg, #2d3748, #4a5568);
+            color: white;
+            border-radius: var(--radius);
+            padding: 26px 28px;
+            text-align: center;
+            min-width: 180px;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 1px solid #4a5568;
+        }
+
+        .score-hero .score-num {
+            font-size: 60px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .score-hero .score-label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .score-hero .score-meta {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .score-hero.high-risk {
+            background: linear-gradient(135deg, #742a2a, #9b2c2c);
+            border-color: #c53030;
+        }
+
+        .score-hero.high-risk .score-num { color: #feb2b2; }
+
+        .score-hero.mid-risk {
+            background: linear-gradient(135deg, #744210, #975a16);
+            border-color: #d69e2e;
+        }
+
+        .score-hero.mid-risk .score-num { color: #fbd38d; }
+
+        .score-hero.low-risk {
+            background: linear-gradient(135deg, #22543d, #276749);
+            border-color: #48bb78;
+        }
+
+        .score-hero.low-risk .score-num { color: #9ae6b4; }
+
+        .dim-bars {
+            flex: 2;
+            min-width: 320px;
+        }
+
+        .dim-section-label {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 10px 0 6px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dim-section-label:first-child { margin-top: 0; }
+
+        .dim-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .dim-bar-label {
+            font-size: 11px;
+            color: var(--text-light);
+            width: 100px;
+            text-align: right;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .dim-bar-track {
+            flex: 1;
+            height: 16px;
+            background: #edf2f7;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .dim-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.6s cubic-bezier(0.22, 0.61, 0.36, 1);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 7px;
+            font-size: 9.5px;
+            color: white;
+            font-weight: 700;
+            min-width: 28px;
+        }
+
+        .dim-bar-fill.low { background: #48bb78; }
+        .dim-bar-fill.mid { background: #ecc94b; color: #744210; }
+        .dim-bar-fill.high { background: #fc8181; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .chart-box {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            border: 1px solid var(--border);
+        }
+
+        .chart-box h3 {
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .chart-inner { height: 280px; }
+
+        .warnings-box {
+            padding: 16px 20px;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            font-size: 0.88em;
+        }
+
+        .warnings-box.has-risks {
+            background: var(--danger-bg);
+            border-left: 4px solid var(--danger);
+        }
+
+        .warnings-box.no-risks {
+            background: var(--success-bg);
+            border-left: 4px solid var(--success);
+        }
+
+        .warnings-box ul { margin-left: 20px; margin-top: 6px; }
+        .warnings-box li { margin: 4px 0; }
+
+        .report-pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: var(--radius);
+            font-family: 'SF Mono', 'Consolas', 'Source Code Pro', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 520px;
+            overflow-y: auto;
+            border: 1px solid #2d3748;
+        }
+
+        .advanced-toggle {
+            cursor: pointer;
+            color: var(--accent);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 14px;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .advanced-toggle:hover { text-decoration: underline; }
+
+        .advanced-panel {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .advanced-panel.show { display: block; }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .slider-group label {
+            width: 120px;
+            font-size: 12.5px;
+            text-align: right;
+            color: var(--text-light);
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent);
+        }
+
+        .slider-group span {
+            width: 40px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .weight-sum-warning {
+            color: var(--danger);
+            font-size: 11px;
+            display: none;
+            margin-top: 8px;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .collapsible-header .arrow {
+            transition: transform 0.2s;
+            font-size: 0.7em;
+        }
+
+        .collapsible-header.open .arrow { transform: rotate(90deg); }
+
+        .methodology-note {
+            background: var(--info-bg);
+            border: 1px solid #bee3f8;
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-top: 14px;
+            font-size: 0.82em;
+            color: #2a4365;
+            line-height: 1.7;
+        }
+
+        .methodology-note code {
+            background: rgba(0, 0, 0, 0.06);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .result-header { flex-direction: column; }
+            .score-hero .score-num { font-size: 46px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .dim-bar-label { width: 75px; font-size: 10px; }
+            .header h1 { font-size: 1.2em; }
+            .preset-selector { flex-direction: column; align-items: flex-start; }
+            .preset-hint { margin-left: 0; }
+            .text-toolbar { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>AI文本检测范式演示工具</h1>
+                    <div class="subtitle">22维统计特征（20核心+2补充） · 多评分体系预设 · 批判性实证研究配套程序 v5.0</div>
+                </div>
+            </div>
+            <div class="badge-row">
+                <span class="badge">📐 句法复杂度 5维</span>
+                <span class="badge">📝 词汇多样性 4维</span>
+                <span class="badge">📄 篇章结构 4维</span>
+                <span class="badge">🤖 AI特征 7维</span>
+                <span class="badge">📊 补充统计 2维</span>
+                <span class="badge warn">⚠ 仅供范式研究参考，不作学术判定</span>
+            </div>
+        </div>
+
+        <!-- Critical Disclaimer -->
+        <div class="disclaimer-banner">
+            <strong>ⓘ 研究性说明：</strong>本工具是学术论文<em>《AI文本检测的同源困境与治理重构——基于高等教育学术评价异化的实证反思》</em>的配套实证程序。其设计目的<strong>并非</strong>提供准确的AI文本判定，而是通过复现主流检测工具的统计特征范式，揭示该范式固有的"同源困境"。任何将本工具评分作为学术诚信判断依据的行为，均违背本研究的基本立场。参见论文第三至五章及附录A。
+        </div>
+
+        <!-- Input Card -->
+        <div class="card">
+            <h2><span class="icon">📝</span>输入待分析文本</h2>
+
+            <div class="text-input-wrapper" id="textInputWrapper">
+                <div class="text-toolbar">
+                    <div class="toolbar-hint">
+                        <span>📂 <strong>拖拽文件</strong>到此处</span>
+                        <span style="color:var(--text-muted);">|</span>
+                        <span>📋 <strong>Ctrl+V</strong> 粘贴</span>
+                        <span style="color:var(--text-muted);">|</span>
+                        <span>支持 .txt / .docx / .pdf</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div class="upload-file-tags" id="fileTags"></div>
+                        <div class="upload-status-inline" id="uploadStatus"></div>
+                        <div class="char-count" id="charCount">0 字符</div>
+                        <button class="btn btn-outline btn-xs" onclick="clearText()">🗑️ 清空</button>
+                    </div>
+                </div>
+                <div class="drag-overlay" id="dragOverlay">
+                    <div class="drag-overlay-content">
+                        <div class="drag-icon">📥</div>
+                        <div class="drag-text">释放文件以提取文本</div>
+                        <div class="drag-sub">支持 .txt / .docx / .pdf</div>
+                    </div>
+                </div>
+                <textarea id="inputText" placeholder="在此粘贴待分析的学术文本、文学作品或AI生成内容……&#10;&#10;建议至少输入200字符以获得稳定的特征提取结果。&#10;您可以将 .txt / .docx / .pdf 文件拖拽到此区域自动提取文本。&#10;也可以直接使用下方预设样本快速体验。&#10;&#10;尝试粘贴本论文的任意段落，观察其如何被自身批判的范式所判定——这是一种"自我指涉"式的实证体验。"></textarea>
+                <input type="file" id="fileInput" accept=".txt,.docx,.pdf" style="display:none;">
+            </div>
+
+            <div class="preset-selector">
+                <label for="presetSelect">🎯 评分体系预设：</label>
+                <select id="presetSelect">
+                    <option value="long_sentence_heavy">长句敏感模式（默认）—— 侧重长句占比与平均句长，类似GPTZero</option>
+                    <option value="balanced">均衡模式 —— 各维度权重接近，模拟通用检测器</option>
+                    <option value="academic_norm">学术规范模式 —— 侧重过渡词、元话语、标点规范，模拟期刊检测工具</option>
+                    <option value="custom">自定义权重 —— 使用下方滑块调节6个核心维度</option>
+                </select>
+                <span class="preset-hint">不同预设对同一文本可能给出截然不同的AI率判定</span>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" id="analyzeBtn" onclick="runAnalysis()">🔍 开始分析</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('literature')">📖 朱自清·荷塘月色</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('tengwangge')">🏯 王勃·滕王阁序</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('linhai')">🌲 老舍·林海</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('ai_long')">🤖 AI-规范长句</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('ai_short')">🔧 AI-口语改写</button>
+                <button class="btn btn-secondary btn-xs" onclick="loadSample('paper_excerpt')">📑 本论文摘录</button>
+            </div>
+
+            <div class="advanced-toggle" onclick="toggleAdvanced()">
+                ⚙️ 自定义权重调节（仅"自定义权重"模式下生效） <span id="toggleIcon">▶</span>
+            </div>
+            <div class="advanced-panel" id="advancedPanel">
+                <p style="font-size:12.5px; color:var(--text-light); margin-bottom:12px;">
+                    可调节以下6个核心维度的权重（基于长句敏感模式修改）。<br>
+                    <strong>提示：</strong>改变权重后重新分析同一文本，观察AI率的变化幅度——这正是论文第五章"发现四：权重配置高度敏感"的实时演示。
+                </p>
+                <div class="slider-group"><label>长句倾向</label><input type="range" id="wLong" min="0" max="100" value="22" step="1" oninput="updateWeightLabel('wLong')"><span id="wLongVal">22%</span></div>
+                <div class="slider-group"><label>句首多样性</label><input type="range" id="wStart" min="0" max="100" value="6" step="1" oninput="updateWeightLabel('wStart')"><span id="wStartVal">6%</span></div>
+                <div class="slider-group"><label>词汇突发性</label><input type="range" id="wBurst" min="0" max="100" value="4" step="1" oninput="updateWeightLabel('wBurst')"><span id="wBurstVal">4%</span></div>
+                <div class="slider-group"><label>句式模式</label><input type="range" id="wPattern" min="0" max="100" value="4" step="1" oninput="updateWeightLabel('wPattern')"><span id="wPatternVal">4%</span></div>
+                <div class="slider-group"><label>过渡词密度</label><input type="range" id="wTrans" min="0" max="100" value="3" step="1" oninput="updateWeightLabel('wTrans')"><span id="wTransVal">3%</span></div>
+                <div class="slider-group"><label>词汇集中度</label><input type="range" id="wVocab" min="0" max="100" value="3" step="1" oninput="updateWeightLabel('wVocab')"><span id="wVocabVal">3%</span></div>
+                <div class="weight-sum-warning" id="weightWarning">⚠️ 权重和超过100%，将自动归一化处理</div>
+            </div>
+
+            <div class="methodology-note">
+                <strong>🔬 方法论提示：</strong>本工具采用"归谬法"论证逻辑。我们严格遵循GPTZero、Turnitin等主流平台<strong>公开的22项统计特征</strong>搭建同构检测引擎（20项核心评分维度+2项补充统计指标）。如果在最简条件下（仅公开特征、无黑箱优化），人类文本与AI文本的评分已出现严重重叠，则任何基于同一统计范式的商用系统都无法从根本上克服这一局限。详见论文第五章第（三）节及附录A。
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultSection" class="hidden">
+
+            <div class="card">
+                <div class="result-header">
+                    <div class="score-hero" id="scoreHero">
+                        <div class="score-num">--</div>
+                        <div class="score-label">AI概率评分</div>
+                        <div class="score-meta" id="scoreMeta"></div>
+                    </div>
+                    <div class="dim-bars" id="dimBars"></div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3>📏 句子长度分布（五级分类）</h3>
+                    <div class="chart-inner" id="sentenceChart"></div>
+                </div>
+                <div class="chart-box">
+                    <h3>🎯 22维特征雷达图（20核心+2补充）</h3>
+                    <div class="chart-inner" id="radarChart"></div>
+                </div>
+                <div class="chart-box">
+                    <h3>✍️ 句首多样性与句长结构</h3>
+                    <div class="chart-inner" id="diversityChart"></div>
+                </div>
+                <div class="chart-box">
+                    <h3>🔗 过渡词、标点与重复模式</h3>
+                    <div class="chart-inner" id="transPunctChart"></div>
+                </div>
+            </div>
+
+            <div class="warnings-box" id="warningsBox"></div>
+
+            <div class="card">
+                <div class="collapsible-header open" onclick="toggleCollapse(this, 'reportContent')">
+                    <span class="arrow">▶</span>
+                    <h2 style="margin:0;">📄 详细特征报告</h2>
+                </div>
+                <div class="report-pre" id="reportText" style="margin-top:12px;"></div>
+            </div>
+
+            <!-- Interpretation Guide -->
+            <div class="card" style="background: #fafcfd;">
+                <h2><span class="icon">📖</span>结果解读指南</h2>
+                <div style="font-size:0.84em; color: var(--text-light); line-height:1.8;">
+                    <p><strong>1. 为什么同一文本在不同预设下得分不同？</strong><br>
+                        这恰好印证了论文的核心论点：AI概率并非文本的固有属性，而是评分体系的人为构造物。详见论文第五章"发现四：权重配置高度敏感"。</p>
+                    <p style="margin-top:8px;"><strong>2. 高AI率是否意味着文本确实是AI生成的？</strong><br>
+                        不一定。经典文学作品可能获得极高AI率（如老舍《林海》被某检测工具判定AI率99.9%）。统计特征检测衡量的仅是"形式相似度"，而非"来源真实性"。这正是论文第三章"形式与本质悖论"与第五章"流畅度陷阱"的核心发现。</p>
+                    <p style="margin-top:8px;"><strong>3. 低AI率是否意味着文本确实是人类写的？</strong><br>
+                        不一定。口语化改写的AI文本可轻松获得低AI率（如本工具中AI-口语改写样本）。这正是论文第四章所指出的"对抗性规避"问题——改写可使检测率下降高达98.96%。</p>
+                    <p style="margin-top:8px;"><strong>4. "流畅度陷阱"是什么？</strong><br>
+                        论文第五章（四）提出的核心发现：检测器无法区分三种性质不同的"规整"——AI生成的"机械规整"、通俗文学的"艺术流畅"、专利文献的"法律规范"。越是规范流畅的人类文本，越容易被误判为AI生成。</p>
+                    <p style="margin-top:8px;"><strong>5. 为什么本工具对经典文学的评分与网传商用工具差异巨大？</strong><br>
+                        这恰恰是论文最有力的实证证据。<strong>AI率并非文本的固有属性，而是检测器参数空间中的人为构造物。</strong>同一统计特征范式下，仅因阈值设定和权重配置的不同，同一文本的AI率即可产生数十个百分点的波动（如老舍《林海》：某商用工具99.9% vs 本程序约40-50%）。商用工具的高AI率源于其对"规整"的极低容忍度，本程序的较低AI率源于相对宽松的阈值设定。两者都基于统计特征范式，都<strong>不具备判定文本来源的终极权威</strong>。切换上方预设或调节自定义权重，观察同一文本的AI率变化，即可直观体验这一论证。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/analyze';
+        let currentResult = null;
+
+        const wrapper = document.getElementById('textInputWrapper');
+        const dragOverlay = document.getElementById('dragOverlay');
+        const fileInput = document.getElementById('fileInput');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const fileTags = document.getElementById('fileTags');
+        const textArea = document.getElementById('inputText');
+        const charCount = document.getElementById('charCount');
+        let pendingFiles = [];
+
+        function cleanPdfText(text) {
+            if (!text) return '';
+            let cleaned = text;
+            cleaned = cleaned.replace(/([\u4e00-\u9fff\u3400-\u4dbf])\s+([\u4e00-\u9fff\u3400-\u4dbf])/g, '$1$2');
+            cleaned = cleaned.replace(/\s*([，。！？；：、""''【】《》（）])\s*/g, '$1');
+            cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
+            cleaned = cleaned.replace(/([^。！？\.!\?\n])\n([a-z\u4e00-\u9fff])/g, '$1 $2');
+            cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+            cleaned = cleaned.split('\n').map(line => line.trim()).join('\n');
+            cleaned = cleaned.replace(/(\w+)-\n(\w+)/g, '$1$2');
+            cleaned = cleaned.trim();
+            return cleaned;
+        }
+
+        function cleanDocxText(text) {
+            if (!text) return '';
+            let cleaned = text;
+            cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+            cleaned = cleaned.replace(/\n[ \t]+\n/g, '\n\n');
+            cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n');
+            cleaned = cleaned.replace(/^\n+/, '').replace(/\n+$/, '');
+            cleaned = cleaned.replace(/(\n[·\-•]\s[^\n]+)\n\n(\n[·\-•]\s)/g, '$1\n$2');
+            cleaned = cleaned.replace(/(\n\d+\.\s[^\n]+)\n\n(\n\d+\.\s)/g, '$1\n$2');
+            return cleaned;
+        }
+
+        function cleanExtractedText(text, fileType) {
+            if (!text) return '';
+            let cleaned = text;
+            if (fileType === 'pdf') cleaned = cleanPdfText(cleaned);
+            else if (fileType === 'docx') cleaned = cleanDocxText(cleaned);
+            cleaned = cleaned.trim();
+            return cleaned;
+        }
+
+        ['dragover', 'drop'].forEach(evt => {
+            document.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); });
+        });
+
+        wrapper.addEventListener('dragover', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            wrapper.classList.add('drag-over');
+        });
+
+        wrapper.addEventListener('dragleave', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (!wrapper.contains(e.relatedTarget)) wrapper.classList.remove('drag-over');
+        });
+
+        wrapper.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            wrapper.classList.remove('drag-over');
+            const files = Array.from(e.dataTransfer.files).filter(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                return ['txt', 'docx', 'pdf'].includes(ext);
+            });
+            if (files.length === 0) {
+                showUploadStatus('⚠️ 不支持的文件格式，请上传 .txt / .docx / .pdf', 'error');
+                return;
+            }
+            const oversized = files.filter(f => f.size > 10 * 1024 * 1024);
+            if (oversized.length > 0) {
+                showUploadStatus('⚠️ 文件超过10MB限制: ' + oversized.map(f => f.name).join(', '), 'error');
+                return;
+            }
+            handleFiles(files);
+        });
+
+        wrapper.addEventListener('click', (e) => {
+            if (e.target === wrapper || e.target === dragOverlay || e.target.closest('.drag-overlay-content')) {
+                fileInput.click();
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFiles(Array.from(fileInput.files));
+                fileInput.value = '';
+            }
+        });
+
+        document.addEventListener('paste', (e) => {
+            if (document.activeElement === textArea) return;
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            const files = [];
+            let hasText = false;
+            for (const item of items) {
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    if (['txt', 'docx', 'pdf'].includes(ext)) files.push(file);
+                } else if (item.kind === 'string' && item.type === 'text/plain') {
+                    hasText = true;
+                }
+            }
+            if (files.length > 0) { e.preventDefault(); handleFiles(files); }
+            else if (hasText) {
+                e.preventDefault();
+                navigator.clipboard.readText().then(text => {
+                    if (text && text.trim()) {
+                        appendTextToTextarea(text);
+                        showUploadStatus('✅ 已粘贴剪贴板文本', 'success');
+                        setTimeout(() => { uploadStatus.innerHTML = ''; }, 2500);
+                    }
+                }).catch(() => {
+                    const pastedText = e.clipboardData.getData('text/plain');
+                    if (pastedText && pastedText.trim()) {
+                        appendTextToTextarea(pastedText);
+                        showUploadStatus('✅ 已粘贴剪贴板文本', 'success');
+                        setTimeout(() => { uploadStatus.innerHTML = ''; }, 2500);
+                    }
+                });
+            }
+        });
+
+        function appendTextToTextarea(text) {
+            const current = textArea.value;
+            const sep = current && !current.endsWith('\n') ? '\n\n' : '';
+            textArea.value = current + sep + text.trim();
+            updateCharCount();
+            textArea.focus();
+            textArea.scrollTop = textArea.scrollHeight;
+        }
+
+        async function handleFiles(files) {
+            pendingFiles = [...pendingFiles, ...files];
+            updateFileTags();
+            for (const file of files) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                showUploadStatus(`⏳ 正在解析: ${file.name}...`, 'loading');
+                try {
+                    const rawText = await extractText(file);
+                    const cleanedText = cleanExtractedText(rawText, ext);
+                    if (cleanedText && cleanedText.trim()) {
+                        appendTextToTextarea(cleanedText);
+                        showUploadStatus(`✅ ${file.name} 已提取 (${cleanedText.length}字符)`, 'success');
+                    } else {
+                        showUploadStatus(`⚠️ ${file.name}: 未能提取到有效文本`, 'error');
+                    }
+                } catch (err) {
+                    showUploadStatus(`❌ ${file.name}: ${err.message}`, 'error');
+                }
+            }
+            setTimeout(() => {
+                if (uploadStatus.textContent.includes('已提取') || uploadStatus.textContent.includes('已粘贴')) {
+                    uploadStatus.innerHTML = '';
+                    wrapper.classList.remove('has-file');
+                }
+            }, 3000);
+        }
+
+        async function extractText(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext === 'txt') {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
+            if (ext === 'docx') {
+                await loadScript('mammoth.browser.min.js');
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        mammoth.extractRawText({ arrayBuffer: e.target.result })
+                            .then(r => resolve(r.value))
+                            .catch(() => reject(new Error('DOCX解析失败，文件可能已损坏')));
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            if (ext === 'pdf') {
+                await loadScript('pdf.min.js');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = async e => {
+                        try {
+                            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) }).promise;
+                            let text = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const content = await page.getTextContent();
+                                const items = content.items;
+                                const lines = {};
+                                items.forEach(item => {
+                                    const y = Math.round(item.transform[5] * 10) / 10;
+                                    if (!lines[y]) lines[y] = [];
+                                    lines[y].push(item);
+                                });
+                                const sortedYs = Object.keys(lines).sort((a, b) => b - a);
+                                sortedYs.forEach(y => {
+                                    lines[y].sort((a, b) => a.transform[4] - b.transform[4]);
+                                    text += lines[y].map(it => it.str).join(' ') + '\n';
+                                });
+                                text += '\n';
+                            }
+                            if (text.trim()) resolve(text);
+                            else reject(new Error('PDF可能为扫描版图片，无法提取文字'));
+                        } catch (err) {
+                            reject(new Error('PDF解析失败: ' + err.message));
+                        }
+                    };
+                    reader.onerror = () => reject(new Error('文件读取失败'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            throw new Error('不支持的文件格式: .' + ext);
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('脚本加载失败，请检查网络连接'));
+                document.head.appendChild(script);
+            });
+        }
+
+        function showUploadStatus(message, type) {
+            uploadStatus.innerHTML = `<span class="${type}">${message}</span>`;
+            if (type === 'success' || type === 'error') wrapper.classList.add('has-file');
+        }
+
+        function updateFileTags() {
+            fileTags.innerHTML = '';
+            if (pendingFiles.length === 0) return;
+            const displayFiles = pendingFiles.slice(-5);
+            displayFiles.forEach((file, displayIndex) => {
+                const actualIndex = pendingFiles.length - displayFiles.length + displayIndex;
+                const tag = document.createElement('span');
+                tag.className = 'upload-file-tag';
+                const icon = file.name.endsWith('.docx') ? '📘' : file.name.endsWith('.pdf') ? '📕' : '📄';
+                const shortName = file.name.length > 20 ? file.name.slice(0, 17) + '...' : file.name;
+                tag.innerHTML = `${icon} ${shortName} <span class="remove-tag" data-index="${actualIndex}">×</span>`;
+                fileTags.appendChild(tag);
+            });
+            if (pendingFiles.length > 5) {
+                const moreTag = document.createElement('span');
+                moreTag.className = 'upload-file-tag';
+                moreTag.textContent = `+${pendingFiles.length - 5}个文件`;
+                moreTag.style.background = '#edf2f7';
+                moreTag.style.border = '1px solid #cbd5e0';
+                moreTag.style.color = '#718096';
+                fileTags.appendChild(moreTag);
+            }
+            fileTags.querySelectorAll('.remove-tag').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    pendingFiles.splice(index, 1);
+                    updateFileTags();
+                    if (pendingFiles.length === 0) { uploadStatus.innerHTML = ''; wrapper.classList.remove('has-file'); }
+                });
+            });
+        }
+
+        function clearText() {
+            textArea.value = '';
+            pendingFiles = [];
+            updateCharCount();
+            uploadStatus.innerHTML = '';
+            wrapper.classList.remove('has-file');
+            updateFileTags();
+        }
+
+        function updateCharCount() {
+            charCount.textContent = textArea.value.length + ' 字符';
+        }
+
+        textArea.addEventListener('input', updateCharCount);
+        textArea.addEventListener('paste', () => { setTimeout(updateCharCount, 50); });
+
+        function loadSample(type) {
+            const samples = {
+                literature: '月光如流水一般，静静地泻在这一片叶子和花上。薄薄的青雾浮起在荷塘里。叶子和花仿佛在牛乳中洗过一样，又像笼着轻纱的梦。虽然是满月，天上却有一层淡淡的云，所以不能朗照。但我以为这恰是到了好处。',
+                tengwangge: '豫章故郡，洪都新府。星分翼轸，地接衡庐。襟三江而带五湖，控蛮荆而引瓯越。物华天宝，龙光射牛斗之墟；人杰地灵，徐孺下陈蕃之榻。雄州雾列，俊采星驰。台隍枕夷夏之交，宾主尽东南之美。都督阎公之雅望，棨戟遥临；宇文新州之懿范，襜帷暂驻。十旬休假，胜友如云；千里逢迎，高朋满座。腾蛟起凤，孟学士之词宗；紫电青霜，王将军之武库。家君作宰，路出名区；童子何知，躬逢胜饯。',
+                linhai: '我总以为大兴安岭奇峰怪石，高不可攀。这回有机会看到它，并且走进原始森林，脚踩在积得几尺厚的松针上，手摸到那些古木，才证实这个悦耳的名字是那样亲切与舒服。大兴安岭的这个"岭"，跟秦岭的"岭"可大不一样。这里的岭的确很多，横着的，顺着的，高点儿的，矮点儿的，长点儿的，短点儿的，可是没有一条使人想起"云横秦岭"那种险句。多少条岭啊，在疾驰的火车上看了几个钟头，既看不完，也看不厌。',
+                ai_long: '在当今数字化时代，人工智能技术的快速发展为各行各业带来了深刻的变革与深远的影响。首先，在医疗健康领域，基于深度学习的AI辅助诊断系统显著提高了疾病检测的准确率与效率，为临床决策提供了有力支撑。其次，在金融风控领域，智能算法模型有效降低了信贷风险，提升了金融机构的运营效率。最后，在教育领域，个性化学习系统通过自适应算法为学生提供了定制化的学习方案与精准的知识推送。综上所述，AI技术的广泛应用不仅显著提升了生产效率，而且有力促进了社会进步与经济发展。',
+                ai_short: '现在这年头，AI技术发展得特别快，各行各业都被深刻改变了。先说医疗吧，AI辅助看病确实提高了准确率，挺厉害的。金融那边呢，智能风控也降低了风险，效率提高不少。教育领域就更有意思了，学生能用上个性化学习，挺方便的。总的来说，AI确实让生产更高效了，社会也在进步。',
+                paper_excerpt: '大语言模型的语义表达、行文逻辑、话语体系，均来源于海量人类优质学术文献语料训练学习。AI文本检测工具所依托的人机文本划分界限，并非客观存在的本质性区别，而是依托标注语料、生成文本样本形成的统计学分布特征。检测工具标榜的"客观公正"评判标准，其数据本源均来自自身需要区分的人类原创文本与AI生成文本，天然缺失独立第三方中立评判立场。'
+            };
+            textArea.value = samples[type] || '';
+            updateCharCount();
+            textArea.focus();
+        }
+
+        function toggleAdvanced() {
+            const panel = document.getElementById('advancedPanel');
+            const icon = document.getElementById('toggleIcon');
+            panel.classList.toggle('show');
+            icon.textContent = panel.classList.contains('show') ? '▼' : '▶';
+        }
+
+        function updateWeightLabel(id) {
+            document.getElementById(id + 'Val').textContent = document.getElementById(id).value + '%';
+            checkWeightSum();
+        }
+
+        function checkWeightSum() {
+            const sum = ['wLong', 'wStart', 'wBurst', 'wPattern', 'wTrans', 'wVocab']
+                .reduce((s, id) => s + parseInt(document.getElementById(id).value), 0);
+            document.getElementById('weightWarning').style.display = sum > 100 ? 'block' : 'none';
+        }
+
+        function getCustomWeights() {
+            return {
+                long_sentence_tendency: parseInt(document.getElementById('wLong').value) / 100,
+                sent_start_diversity: parseInt(document.getElementById('wStart').value) / 100,
+                burstiness: parseInt(document.getElementById('wBurst').value) / 100,
+                syntactic_pattern_density: parseInt(document.getElementById('wPattern').value) / 100,
+                transition_density: parseInt(document.getElementById('wTrans').value) / 100,
+                vocabulary_concentration: parseInt(document.getElementById('wVocab').value) / 100
+            };
+        }
+
+        function toggleCollapse(header, contentId) {
+            header.classList.toggle('open');
+            const content = document.getElementById(contentId);
+            if (content) content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function runAnalysis() {
+            const text = textArea.value.trim();
+            if (!text || text.length < 50) {
+                alert('⚠️ 文本过短，至少需要50字符以进行有意义的特征提取');
+                return;
+            }
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 分析中...';
+            const presetSelect = document.getElementById('presetSelect').value;
+            const payload = { text: text };
+            if (presetSelect === 'custom') payload.weights = getCustomWeights();
+            else payload.preset = presetSelect;
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) { const err = await response.json(); throw new Error(err.error || '服务器错误'); }
+                const data = await response.json();
+                currentResult = data;
+                displayResults(data);
+                document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                alert('❌ 分析失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 开始分析';
+            }
+        }
+
+        function displayResults(ai) {
+            document.getElementById('resultSection').classList.remove('hidden');
+            const hero = document.getElementById('scoreHero');
+            let cls = 'low-risk';
+            if (ai.risk_level === '高风险') cls = 'high-risk';
+            else if (ai.risk_level === '中风险') cls = 'mid-risk';
+            hero.className = 'score-hero ' + cls;
+            hero.innerHTML = `
+                <div class="score-num">${ai.ai_probability}%</div>
+                <div class="score-label">AI概率评分</div>
+                <div class="score-meta">
+                    风险等级: ${ai.risk_level}<br>
+                    置信度: ${ai.confidence}<br>
+                    语言规整度: ${ai.linguistic_regularity}<br>
+                    评分体系: ${ai.preset_name || '默认'}<br>
+                    特征维度: ${ai.feature_count || 22}维
+                </div>`;
+
+            const dimNames = {
+                sentence_regularity: '句法规整度', long_sentence_tendency: '长句倾向', avg_sent_length: '平均句长',
+                sent_len_variance: '句长方差', sent_start_diversity: '句首多样性',
+                vocabulary_concentration: '词汇集中度', hapax_ratio: 'Hapax比例', entropy_score: '信息熵',
+                vocabulary_innovation: '词汇创新度',
+                transition_density: '过渡词密度', punctuation_regularity: '标点规范度',
+                metadiscourse_density: '元话语密度', paragraph_regularity: '段落规整度',
+                syntactic_pattern_density: '句式模板密度', function_word_density: '虚词密度',
+                ngram_repetition: 'n-gram重复率', repeat_pattern_density: '重复模式密度',
+                burstiness: '词汇突发性', perplexity: '困惑度', argument_connect_diversity: '连接词多样性',
+                sentence_skewness: '句长偏度', sentence_kurtosis: '句长峰度'
+            };
+            const dimCategories = {
+                '句法复杂度（5维）': ['sentence_regularity', 'long_sentence_tendency', 'avg_sent_length',
+                    'sent_len_variance', 'sent_start_diversity'
+                ],
+                '词汇多样性（4维）': ['vocabulary_concentration', 'hapax_ratio', 'entropy_score',
+                    'vocabulary_innovation'
+                ],
+                '篇章结构（4维）': ['transition_density', 'punctuation_regularity', 'metadiscourse_density',
+                    'paragraph_regularity'
+                ],
+                'AI特征（7维）': ['syntactic_pattern_density', 'function_word_density', 'ngram_repetition',
+                    'repeat_pattern_density', 'burstiness', 'perplexity', 'argument_connect_diversity'
+                ],
+                '补充统计（2维）': ['sentence_skewness', 'sentence_kurtosis']
+            };
+
+            const scores = ai.dimension_scores || {};
+            let barsHtml = '';
+            for (const [catName, catDims] of Object.entries(dimCategories)) {
+                barsHtml += `<div class="dim-section-label">${catName}</div>`;
+                for (const key of catDims) {
+                    const value = scores[key] !== undefined ? scores[key] : 0;
+                    const name = dimNames[key] || key;
+                    const barCls = value > 60 ? 'high' : (value > 35 ? 'mid' : 'low');
+                    barsHtml += `<div class="dim-bar-row">
+                        <span class="dim-bar-label">${name}</span>
+                        <div class="dim-bar-track">
+                            <div class="dim-bar-fill ${barCls}" style="width:${value}%">${value}%</div>
+                        </div>
+                    </div>`;
+                }
+            }
+            document.getElementById('dimBars').innerHTML = barsHtml;
+
+            const box = document.getElementById('warningsBox');
+            const risks = ai.risk_factors || ['各项指标正常'];
+            const isNormal = risks.length === 1 && risks[0] === '各项指标正常';
+            box.className = 'warnings-box ' + (isNormal ? 'no-risks' : 'has-risks');
+            box.innerHTML = isNormal ?
+                '<strong>✅ 风险评估</strong><p>各项指标在正常范围内。但这并不意味着文本一定是人类创作的——对抗性改写可以轻松绕过这些检测指标。参见论文第四章"对抗性规避"及第五章实证发现。</p>' :
+                '<strong>⚠️ 风险提示</strong><p style="font-size:0.82em; margin-bottom:6px;">以下指标偏高，但请注意：<em>高指标仅反映文本与训练语料的统计相似度，不代表确定的AI来源。</em>经典文学作品（如老舍《林海》AI率99.9%）同样可能触发高风险提示。参见论文第五章"流畅度陷阱"。</p><ul>' +
+                risks.map(r => '<li>' + r + '</li>').join('') + '</ul>';
+
+            const reportEl = document.getElementById('reportText');
+            reportEl.textContent = (ai.report_text || '') + '\n\n' +
+                '──────────────────────────────────────────────\n' +
+                '【重要提示】\n' +
+                '本报告的所有数值均基于22维统计特征与训练语料\n' +
+                '的相似度计算，不代表文本的实际创作来源。\n' +
+                '统计特征检测范式存在"同源困境"：规范人类文本\n' +
+                '可能被误判，改写AI文本可能轻松规避。\n' +
+                '请结合内容质量、论证逻辑、学术贡献等质性维度\n' +
+                '进行综合判断。\n' +
+                '参见：AI文本检测的同源困境与治理重构（论文第三至五章及附录A）';
+
+            if (ai.stats) renderCharts(ai.stats, ai.dimension_scores);
+        }
+
+        function renderCharts(stats, dimScores) {
+            const sentDom = document.getElementById('sentenceChart');
+            if (sentDom) {
+                const chart = echarts.init(sentDom);
+                const d = stats.sent_dist || {};
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: 40, right: 20, top: 20, bottom: 30 },
+                    xAxis: { type: 'category', data: ['极短(<10)', '短(10-20)', '中(20-50)', '长(50-100)', '超长(>100)'], axisLabel: { fontSize: 11 } },
+                    yAxis: { type: 'value', name: '句数' },
+                    series: [{
+                        type: 'bar',
+                        data: [d.very_short || 0, d.short || 0, d.medium || 0, d.long || 0, d.very_long || 0],
+                        itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#48bb78' }, { offset: 0.5, color: '#ecc94b' }, { offset: 1, color: '#fc8181' }]) },
+                        borderRadius: [6, 6, 0, 0],
+                        label: { show: true, position: 'top', fontSize: 11 }
+                    }]
+                });
+            }
+
+            const radarDom = document.getElementById('radarChart');
+            if (radarDom) {
+                const chart = echarts.init(radarDom);
+                const dimNamesRadar = {
+                    sentence_regularity: '句法规整', long_sentence_tendency: '长句倾向',
+                    avg_sent_length: '平均句长', sent_len_variance: '句长方差', sent_start_diversity: '句首多样',
+                    vocabulary_concentration: '词汇集中', hapax_ratio: 'Hapax', entropy_score: '熵',
+                    vocabulary_innovation: '词汇创新', transition_density: '过渡词',
+                    punctuation_regularity: '标点', metadiscourse_density: '元话语',
+                    paragraph_regularity: '段落', syntactic_pattern_density: '句式模板',
+                    function_word_density: '虚词', ngram_repetition: 'n-gram', repeat_pattern_density: '重复模式',
+                    burstiness: '突发性', perplexity: '困惑度', argument_connect_diversity: '连接词',
+                    sentence_skewness: '偏度', sentence_kurtosis: '峰度'
+                };
+                const inds = [], vals = [];
+                for (const [k, v] of Object.entries(dimScores)) {
+                    inds.push({ name: dimNamesRadar[k] || k, max: 100 });
+                    vals.push(v);
+                }
+                chart.setOption({
+                    radar: { indicator: inds, shape: 'circle', center: ['50%', '55%'], radius: '60%', axisName: { fontSize: 7.5, color: '#718096' } },
+                    series: [{ type: 'radar', data: [{ value: vals, name: '维度得分' }], areaStyle: { color: 'rgba(102,126,234,0.15)' }, lineStyle: { color: '#667eea', width: 2 }, itemStyle: { color: '#667eea' } }]
+                });
+            }
+
+            const divDom = document.getElementById('diversityChart');
+            if (divDom) {
+                const chart = echarts.init(divDom);
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    legend: { data: ['占比 (%)', '多样性指标'], bottom: 0 },
+                    grid: { left: 45, right: 20, top: 20, bottom: 40 },
+                    xAxis: { type: 'category', data: ['长句占比', '短句占比', '句首多样性\n(×100)', '句长方差\n(×100)'] },
+                    yAxis: { type: 'value', max: 100 },
+                    series: [
+                        { name: '占比 (%)', type: 'bar', data: [(stats.long_ratio * 100).toFixed(1), (stats.short_ratio * 100).toFixed(1), '-', '-'], itemStyle: { color: '#667eea', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', fontSize: 10 } },
+                        { name: '多样性指标', type: 'bar', data: ['-', '-', (stats.sent_start_diversity * 100).toFixed(1), ((stats.sent_len_variance || 0) * 100).toFixed(1)], itemStyle: { color: '#ed8936', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', fontSize: 10 } }
+                    ]
+                });
+            }
+
+            const tpDom = document.getElementById('transPunctChart');
+            if (tpDom) {
+                const chart = echarts.init(tpDom);
+                chart.setOption({
+                    tooltip: { trigger: 'axis' },
+                    legend: { data: ['过渡词', '标点', '重复模式'], bottom: 0 },
+                    grid: { left: 45, right: 20, top: 20, bottom: 40 },
+                    xAxis: { type: 'category', data: ['总数', '每千字密度'] },
+                    yAxis: { type: 'value' },
+                    series: [
+                        { name: '过渡词', type: 'bar', data: [stats.trans_count || 0, (stats.trans_density || 0).toFixed(1)], itemStyle: { color: '#48bb78', borderRadius: [4, 4, 0, 0] } },
+                        { name: '标点', type: 'bar', data: [stats.punct_total || 0, (stats.punct_density || 0).toFixed(1)], itemStyle: { color: '#ecc94b', borderRadius: [4, 4, 0, 0] } },
+                        { name: '重复模式', type: 'bar', data: [stats.repeat_pattern_count || 0, (stats.repeat_pattern_density || 0).toFixed(1)], itemStyle: { color: '#fc8181', borderRadius: [4, 4, 0, 0] } }
+                    ]
+                });
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            ['sentenceChart', 'radarChart', 'diversityChart', 'transPunctChart'].forEach(id => {
+                const dom = document.getElementById(id);
+                if (dom) { const instance = echarts.getInstanceByDom(dom); if (instance) instance.resize(); }
+            });
+        });
+
+        updateCharCount();
+    </script>
+</body>
+</html>
